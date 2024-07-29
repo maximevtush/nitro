@@ -1138,7 +1138,7 @@ func (s *TransactionStreamer) checkResult(msgResult *execution.MessageResult, ex
 }
 
 func (s *TransactionStreamer) storeResult(
-	pos arbutil.MessageIndex,
+	msgIdx arbutil.MessageIndex,
 	msgResult execution.MessageResult,
 	batch ethdb.Batch,
 ) error {
@@ -1146,7 +1146,7 @@ func (s *TransactionStreamer) storeResult(
 	if err != nil {
 		return err
 	}
-	key := dbKey(messageResultPrefix, uint64(pos))
+	key := dbKey(messageResultPrefix, uint64(msgIdx))
 	return batch.Put(key, msgResultBytes)
 }
 

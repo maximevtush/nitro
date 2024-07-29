@@ -1023,9 +1023,9 @@ func (s *TransactionStreamer) PopulateFeedBacklog() error {
 	return s.inboxReader.tracker.PopulateFeedBacklog(s.broadcastServer)
 }
 
-func (s *TransactionStreamer) writeMessage(pos arbutil.MessageIndex, msg arbostypes.MessageWithMetadataAndBlockHash, batch ethdb.Batch) error {
+func (s *TransactionStreamer) writeMessage(msgIdx arbutil.MessageIndex, msg arbostypes.MessageWithMetadataAndBlockHash, batch ethdb.Batch) error {
 	// write message with metadata
-	key := dbKey(messagePrefix, uint64(pos))
+	key := dbKey(messagePrefix, uint64(msgIdx))
 	msgBytes, err := rlp.EncodeToBytes(msg.MessageWithMeta)
 	if err != nil {
 		return err
@@ -1038,7 +1038,7 @@ func (s *TransactionStreamer) writeMessage(pos arbutil.MessageIndex, msg arbosty
 	blockHashDBVal := blockHashDBValue{
 		BlockHash: msg.BlockHash,
 	}
-	key = dbKey(blockHashInputFeedPrefix, uint64(pos))
+	key = dbKey(blockHashInputFeedPrefix, uint64(msgIdx))
 	msgBytes, err = rlp.EncodeToBytes(blockHashDBVal)
 	if err != nil {
 		return err

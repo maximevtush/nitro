@@ -728,7 +728,7 @@ func (s *TransactionStreamer) getPrevPrevDelayedRead(pos arbutil.MessageIndex) (
 }
 
 func (s *TransactionStreamer) countDuplicateMessages(
-	pos arbutil.MessageIndex,
+	msgIdx arbutil.MessageIndex,
 	messages []arbostypes.MessageWithMetadataAndBlockHash,
 	batch *ethdb.Batch,
 ) (uint64, bool, *arbostypes.MessageWithMetadata, error) {
@@ -737,7 +737,7 @@ func (s *TransactionStreamer) countDuplicateMessages(
 		if uint64(len(messages)) == curMsg {
 			break
 		}
-		key := dbKey(messagePrefix, uint64(pos))
+		key := dbKey(messagePrefix, uint64(msgIdx))
 		hasMessage, err := s.db.Has(key)
 		if err != nil {
 			return 0, false, nil, err
@@ -760,7 +760,7 @@ func (s *TransactionStreamer) countDuplicateMessages(
 
 			if err := rlp.DecodeBytes(haveMessage, &dbMessageParsed); err != nil {
 				log.Warn("TransactionStreamer: Reorg detected! (failed parsing db message)",
-					"pos", pos,
+					"msgIdx", msgIdx,
 					"err", err,
 				)
 				return curMsg, true, nil, nil
@@ -783,7 +783,7 @@ func (s *TransactionStreamer) countDuplicateMessages(
 							if *batch == nil {
 								*batch = s.db.NewBatch()
 							}
-							if err := s.writeMessage(pos, nextMessage, *batch); err != nil {
+							if err := s.writeMessage(msgIdx, nextMessage, *batch); err != nil {
 								return 0, false, nil, err
 							}
 						}
@@ -798,7 +798,7 @@ func (s *TransactionStreamer) countDuplicateMessages(
 		}
 
 		curMsg++
-		pos++
+		msgIdx++
 	}
 
 	return curMsg, false, nil, nil

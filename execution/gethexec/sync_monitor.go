@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 
+	"github.com/offchainlabs/nitro/arbutil"
 	"github.com/offchainlabs/nitro/execution"
 )
 
@@ -31,6 +32,9 @@ type SyncMonitor struct {
 	config    *SyncMonitorConfig
 	consensus execution.ConsensusInfo
 	exec      *ExecutionEngine
+
+	safeMsgCount      arbutil.MessageIndex
+	finalizedMsgCount arbutil.MessageIndex
 }
 
 func NewSyncMonitor(config *SyncMonitorConfig, exec *ExecutionEngine) *SyncMonitor {
@@ -136,4 +140,9 @@ func (s *SyncMonitor) BlockMetadataByNumber(blockNum uint64) (common.BlockMetada
 	}
 	log.Debug("FullConsensusClient is not accessible to execution, BlockMetadataByNumber will return nil")
 	return nil, nil
+}
+
+func (s *SyncMonitor) StoreSafeAndFinalizedMsgCounts(safeMsgCount arbutil.MessageIndex, finalizedMsgCount arbutil.MessageIndex) {
+	s.safeMsgCount = safeMsgCount
+	s.finalizedMsgCount = finalizedMsgCount
 }

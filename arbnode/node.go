@@ -638,7 +638,7 @@ func createNodeImpl(
 		}
 		firstMessageBlock.SetUint64(block)
 	}
-	inboxReader, err := NewInboxReader(inboxTracker, l1client, l1Reader, firstMessageBlock, delayedBridge, sequencerInbox, func() *InboxReaderConfig { return &configFetcher.Get().InboxReader })
+	inboxReader, err := NewInboxReader(inboxTracker, l1client, l1Reader, firstMessageBlock, delayedBridge, sequencerInbox, func() *InboxReaderConfig { return &configFetcher.Get().InboxReader }, exec)
 	if err != nil {
 		return nil, err
 	}

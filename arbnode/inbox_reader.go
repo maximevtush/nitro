@@ -20,6 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 
 	"github.com/offchainlabs/nitro/arbutil"
+	"github.com/offchainlabs/nitro/execution"
 	"github.com/offchainlabs/nitro/util/arbmath"
 	"github.com/offchainlabs/nitro/util/headerreader"
 	"github.com/offchainlabs/nitro/util/stopwaiter"
@@ -93,13 +94,14 @@ type InboxReader struct {
 	caughtUpChan   chan struct{}
 	client         *ethclient.Client
 	l1Reader       *headerreader.HeaderReader
+	execClient     execution.ExecutionClient
 
 	// Atomic
 	lastSeenBatchCount atomic.Uint64
 	lastReadBatchCount atomic.Uint64
 }
 
-func NewInboxReader(tracker *InboxTracker, client *ethclient.Client, l1Reader *headerreader.HeaderReader, firstMessageBlock *big.Int, delayedBridge *DelayedBridge, sequencerInbox *SequencerInbox, config InboxReaderConfigFetcher) (*InboxReader, error) {
+func NewInboxReader(tracker *InboxTracker, client *ethclient.Client, l1Reader *headerreader.HeaderReader, firstMessageBlock *big.Int, delayedBridge *DelayedBridge, sequencerInbox *SequencerInbox, config InboxReaderConfigFetcher, execClient execution.ExecutionClient) (*InboxReader, error) {
 	err := config().Validate()
 	if err != nil {
 		return nil, err
@@ -113,6 +115,7 @@ func NewInboxReader(tracker *InboxTracker, client *ethclient.Client, l1Reader *h
 		firstMessageBlock: firstMessageBlock,
 		caughtUpChan:      make(chan struct{}),
 		config:            config,
+		execClient:        execClient,
 	}, nil
 }
 
@@ -128,6 +131,36 @@ func (r *InboxReader) Start(ctxIn context.Context) error {
 			hadError = false
 		}
 		return time.Second
+	})
+
+	r.CallIteratively(func(ctx context.Context) time.Duration {
+		sleepTime := time.Second
+
+		safeBlockNr, err := r.l1Reader.LatestSafeBlockNr(ctx)
+		if err != nil {
+			log.Warn("error getting latest safe block", "err", err)
+			return sleepTime
+		}
+		safeMsgCount, err := r.recentParentChainBlockToMsg(ctx, safeBlockNr)
+		if err != nil {
+			log.Warn("error getting latest safe message count", "err", err)
+			return sleepTime
+		}
+
+		finalized, err := r.l1Reader.LatestFinalizedBlockNr(ctx)
+		if err != nil {
+			log.Warn("error getting latest finalized block", "err", err)
+			return sleepTime
+		}
+		finalizedMsgCount, err := r.recentParentChainBlockToMsg(ctx, finalized)
+		if err != nil {
+			log.Warn("error getting latest finalized message count", "err", err)
+			return sleepTime
+		}
+
+		r.execClient.StoreSafeAndFinalizedMsgCounts(safeMsgCount, finalizedMsgCount)
+
+		return sleepTime
 	})
 
 	// Ensure we read the init message before other things start up
